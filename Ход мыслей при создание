@@ -1,0 +1,71 @@
+При создание роутера первое что нужно делать, это перенаправить все запросы к серверу через файл index.php, делаем с помощью файла .htacces, в нем пишем следующие:
+	Options +FollowSymLinks -Indexes
+RewriteEngine On
+
+RewriteCond  %{REQUEST_FILENAME} !-d
+RewriteCond  %{REQUEST_FILENAME} !-f
+RewriteRule ^ public/index.php [L]
+DirectoryIndex public/index.php
+… 
+Переходим в созданный класс и объявляем защищённый массив routes (будет принимать маршруты)  и  переменную page_404, которая возьмет по умолчанию адрес скрипта 404
+protected $routes;
+protected $page_404;
+
+
+Создаем __сonstruct который примет выше упомянутые переменные
+  function  __construct($routes = [], $page_404 = '')
+{
+    $this->routes = $routes;
+    $this->page_404 = $page_404;
+}
+
+Переходим в индексе для проверок, подключаем наш компонетнт
+require_once "../components/Router.php";
+)
+Пишу массив где ключи будут маршрутами, а значение адрес загружаемого скрипта 
+
+$root = __DIR__.'/../’
+$routes =[
+    '/' =>$root.'main.php',
+    '/hi' =>$root.'hello.php',
+    '/by' =>$root.'bye.php',
+    '/val' =>$root.'validator.php',
+];
+
+)Задаю адрес скрипта с 404
+$page_404 = $root .'404.php';
+
+Создаю объект роутер в переменную router с параметрами массива маршрутов и 404, 
+
+$router = new Router($routes, $page_404);
+
+От этого объекта я жду чтобы он через метод includes_page подключил мне нужный скрипт, метода пока такого нет, мы его пока в индексе запросим
+$router->includes_page();
+ и переедем в компоненту Router, чтобы его написать
+он будет нам делать именно то как мы его назвали, подключит страницу 
+public function includes_page()
+{
+  require_once $this->getScript();
+}
+
+через внутренний метод getScript, последний будет сравнивать ключи массива с маршрутами, и если найдет одинаковый ключ, вернет нам имя нужного скрипта:
+
+
+  protected function getScript()
+{
+    $url = mb_strtolower($this->get_only_url());
+
+    if(array_key_exists($url,$this->routes) ){
+        return $this->routes[$url];
+    };
+    return $this->page_404;
+}
+
+При помощью  mb_strtolower перевел url в нижний регистр, который получил только адрес из метода get_only_url, этот метод отделяет url от параметров $_GET 
+  protected function get_only_url()
+{
+    $route = explode('?',$_SERVER['REQUEST_URI'],'2');
+    return  mb_strtolower($route[0]);
+}
+
+Проверяем, все работает!  
